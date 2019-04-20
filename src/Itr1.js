@@ -1,13 +1,13 @@
 import React, { useReducer, useEffect } from 'react';
-import {patchReducerWithSaga, exampleSaga} from './sagaItr1'
+import {patchReducerWithSaga} from './saga'
 import './App.css';
 
 const reducer = (state, action) => {
   switch (action.type) {
     case 'INCREMENT':
-      return ++state
+      return {...state, counter:state.counter+1}
     case 'DECREMENT':
-      return --state
+      return {...state, counter:state.counter-1}
     default:
       return state
   }
@@ -19,14 +19,11 @@ let enableSaga = (dispatch)=>dispatch({type:'ENABLE_SAGA'})
 let disableSaga = (dispatch)=>dispatch({type:'DISABLE_SAGA'})
 
 const Counter = () =>{
-  const store = useReducer(reducer, 0)
-  const {run} = patchReducerWithSaga(store)
-  run(exampleSaga);
-
-
+  const store = useReducer(reducer, {counter:0})
+  patchReducerWithSaga({key:'counter', store})
   return (
     <div className='App'>
-      <div style={{fontSize: '5rem'}}>{store[0]}</div>
+      <div style={{fontSize: '5rem'}}>{store[0].counter}</div>
       <div>
         <a href='#' onClick={()=>increment(store[1])}>+</a>
         <span>{'   '}</span>
