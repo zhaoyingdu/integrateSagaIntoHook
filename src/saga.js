@@ -3,11 +3,8 @@ import {take, put, cancel, fork} from 'redux-saga/effects'
 import _ from 'lodash'
 import {EventEmitter} from 'events'
 
-//const emitter = new EventEmitter()
 const channel = stdChannel()
-//emitter.on('action', channel.put)
 
-let id =0
 /** create an example saga that when enabled will duplicate action effect.
  * (i.e. increment by 2, decrement by 2). when disabled, will change back to 
  * original effect, i.e increment by 1/ decrement by 1
@@ -41,7 +38,6 @@ export const IO = {
       const dispatch = keyedStore.store[1]
       dispatch(actionObj)
     })
-    //dispatch(actionObj) //dispatch to reducer
   },
   getState(){
     const states = stores.map(keyedStore=>{

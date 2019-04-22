@@ -19,6 +19,7 @@ const reducer = (state, action) => {
 }
 const CounterSum = () =>{
   const store = useReducer(reducer, initState)
+  console.log('here')
   patchReducerWithSaga({key:'counterSum', store})
   return (
     <div className='App'>

@@ -8,7 +8,6 @@ Idea comes from redux's official site [middleware#monkeypatch-middleware](https:
 **links:** [reduxMiddleware#monkeypatch](https://redux.js.org/advanced/middleware#attempt-3-monkeypatching-dispatch)  
 **implementation:**  
 ![component and action flow](./assets/monkeyPatchStore.png)  
-see also: comments in [CounterItr1](https://github.com/zhaoyingdu/integrateSagaIntoHook/blob/master/src/CounterItr1.js) [SagaItr1](https://github.com/zhaoyingdu/integrateSagaIntoHook/blob/master/src/sagaItr1.js)
 
 
 ## Iteration 2
@@ -49,3 +48,18 @@ here the dispatch property is local to the saga IO, invoked by channel.put, or y
 **note:**  
 redux saga is good at implementing 'request'->'side effect'->'dispatch' type of flow. if an action is deemed to dispatched by ui component and reflected directly by reducer, then it probably should be ignored by saga. only use saga to monitor action with side effect. because saga middleware create a copy of the action, dispatch one directly to store, another to saga channel which eventually can be read by take effect.  
 todo: verify this behaviour with createSagaMiddleWare
+
+
+## Iteration 3
+**objective:** improvement on iteration two with more explicit(clear) code semantics  
+**Overview:**  
+Enhancing Iteration 2.  
+components have ioslated react dispatch, but share the result of saga effect(to be explicit, the 'put' effect).  
+I.e. one component's saga can use put effect to dispatch actions to all connected component's reducer.  
+**key words:** isolated hook dispatch, shared saga effect  
+**API:**  
+Steps to create shared saga with multiple useReducer:  
+1. create a sharedChannel object  
+2. stepTwo: pass that object a prop to component who will use useReducer and would like to connect to this common channel with some
+3. other component.  
+4. stepThree: use customized hook, useSagaReducer  
