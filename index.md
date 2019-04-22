@@ -51,8 +51,8 @@ todo: verify this behaviour with createSagaMiddleWare
 
 
 ## Iteration 3
-**objective:** improvement on iteration two with more explicit(clear) code semantics  
-**Overview:**  
+**objective:** improvement on iteration 2 a bit more coherent to react's render concept. 
+**overview:**  
 Enhancing Iteration 2.  
 components have ioslated react dispatch, but share the result of saga effect(to be explicit, the 'put' effect).  
 I.e. one component's saga can use put effect to dispatch actions to all connected component's reducer.  
