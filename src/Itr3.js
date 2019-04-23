@@ -24,6 +24,7 @@ let decrement = (dispatch)=>dispatch({type:'DECREMENT'})
 const Counter = ({sharedChannel}) =>{
   const saga = function*(){
     yield takeEvery('INCREMENT', function*(){
+      console.log('emem')
       yield put({type:'INCREMENTED'})
     })
     yield takeEvery('DECREMENT', function*(){

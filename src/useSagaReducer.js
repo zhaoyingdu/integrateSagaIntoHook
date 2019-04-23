@@ -3,6 +3,7 @@ import {stdChannel} from 'redux-saga'
 import {useReducer, useEffect, useState} from 'react'
 import _ from 'lodash'
 import {runSaga } from 'redux-saga'
+import { EventEmitter } from 'events';
 
 /**
  * When called, returns a "channel" object that can be used as argument to run saga.
@@ -13,17 +14,16 @@ import {runSaga } from 'redux-saga'
  * @param {String|Integer} id An unique Id assigned to an IO, used to remove corresponding reference inside
  *  sharedChannel
  */
-const createIO = (store, sharedChannel, id)=>{
+const createIO = ({state, vanillaDispatch, sharedChannel, id})=>{
   const channel = stdChannel() 
   // redux-saga buffer, push by channel.put, pop by yield take(or channel.take, this methhod not used in this project)
   /**
    * with sharedChannel, this buffer has two source: 1. patched useReducer dspatch 2. sharedChannel.broadcast
    * without sharedChannel, this buffer has only source 1. stated above
    */
-  
-  let storeRef = store 
+  let stateRef = state
   /** 
-   * reference to the newest store
+   * reference to the newest store[0]
    * this ref will be refreshed each time useSagaReducer is invoked,
    * according to Dan abramov's useEffect post about react mental model,
    * each re-render(i.e. componented function get called)
@@ -35,12 +35,13 @@ const createIO = (store, sharedChannel, id)=>{
    * state from first useReducer call, because we only stored this value inside
    * useeffect(()=>{...}, []) which is a one time execution after mount
    */
-  const refreshStore = store=>storeRef = store
+  const update = ({state})=>{
+    stateRef = state
+  }
   return  {
     id,
-    refreshStore,
+    update,
     channel,
-
     /**
      * not to confuse with useReducers' vanilla dispatch. this dispatch
      * function is used by redux saga to resolve a yield put(actionObj) call on the 
@@ -48,46 +49,54 @@ const createIO = (store, sharedChannel, id)=>{
      * if they are passed as argumen to one runSaga call, means that IO can only be
      * affected by that particular saga function(besides patched useReducer dispatch))
      */
-    dispatch: actionObj=>{ // the source of this action is a yield put(actionObj) 
-      //call from one of the collaborating saga-reducer, not from useReducer vanilla dispatch
-      // therefore, it should first be dispatched, then put to channel. like 
-      // what is done to action from useReducer vanilla dispatch
-      return sharedChannel
-        ? sharedChannel.broadcast(actionObj)
-        : ( storeRef[1](actionObj), //actual call to useReducers' vanilla dispatch
-            channel.put(actionObj)) 
+    dispatch: action=>{
+      channel.put(action)
+      //console.log(action)
+      //console.log(vanillaDispatch)
+      vanillaDispatch(action)
     },
     getState(){
-      return storeRef[0] 
+      return stateRef 
     },
-    effectMiddlewares: [],
+    effectMiddlewares: [
+      runEffect => effect =>{
+        if(effect.type ==='PUT'){
+          console.log(effect.payload.action)
+          sharedChannel? sharedChannel.broadcast({action:effect.payload.action, sourceID: id}) : _.noop()
+          runEffect(effect)
+        } else{
+          runEffect(effect)
+        }
+      }
+
+    ],
   } 
 }
 
 
 
 export const sharedChannel = ()=>{
-  const stores = []
-  const addIO = ({store,IO, id})=>{
-    stores.push({store,IO, id})
+  const IOs = []
+  const addIO = ({IO, id})=>{
+    IOs.push({IO, id})
   }
-  // refresh store on each re-render, purpose is to sync store[0] with new state resulted, 
+
+  // everything is updated in IO, no need for the following code
+  /*// refresh store on each re-render, purpose is to sync store[0] with new state resulted, 
   // from a re-render, same applies to createIO
   const refreshStore = ({store, id})=>{
-    _.find(stores, {id: id}).store = store
-  }
-  const broadcast = (actionObj)=>{
-    stores.forEach(({store,IO})=>{
-      store[1](actionObj)
-      IO.channel.put(actionObj)
+    _.find(IOs, {id: id}).store = store
+  }*/
+  const broadcast = ({action, sourceID})=>{
+    IOs.forEach(({IO, id})=>{
+      sourceID === id ?_.noop() :IO.dispatch(action)
     })
   }
-  const remove = (id)=>_.remove(stores, store=>store.id === id)
+  const remove = (id)=>_.remove(IOs, io=>io.id === id)
   return {
     addIO,
-    refreshStore,
     broadcast,
-    remove
+    remove,
   }
 }
 
@@ -95,6 +104,7 @@ export const sharedChannel = ()=>{
 export const useSagaReducer = (reducer, initState,saga, sharedChannel=null)=>{
   const store = useReducer(reducer, initState)
   const [IO, setIO] = useState(null)
+
   const dispatch = action=>{
       const result = store[1](action) 
       IO.channel.put(action)
@@ -103,9 +113,10 @@ export const useSagaReducer = (reducer, initState,saga, sharedChannel=null)=>{
   
   useEffect(()=>{
     const id = _.uniqueId()
-    const IO = createIO(store, sharedChannel, id)
+    IO?_.noop(): console.log('IO not inited')
+    const IO = createIO({state:store[0], vanillaDispatch: store[1], sharedChannel, id})
     setIO(IO)
-    sharedChannel.addIO({store,IO, id})
+    sharedChannel.addIO({IO, id})
     const mainTask = runSaga(IO, saga)
     return ()=>{
       sharedChannel? sharedChannel.remove(IO.id): _.noop() 
@@ -116,11 +127,13 @@ export const useSagaReducer = (reducer, initState,saga, sharedChannel=null)=>{
       mainTask.cancel()
     }
   },[])
+  useEffect(()=>{
+    //IO ?IO.dispatch = dispatch :_.noop()
+  }, [IO])
   
   useEffect(()=>{
     if(IO){
-      IO.refreshStore(store)  // refresh store in IO
-      sharedChannel.refreshStore({store, id: IO.id}) // refresh store in shared channel
+      IO.update({state: store[0]})  // refresh store[0] in IO
     }
   })
   return [store[0], dispatch]
