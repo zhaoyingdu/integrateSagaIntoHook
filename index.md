@@ -1,7 +1,7 @@
 # Integrate Redux-saga into React hooks - Iteration logs
 
 ##credits##:  
-*list of others' work that worth listed explicited. This codebase learned their practice*  
+*list of others' work that worth listed explicited. This codebase learned their practices*  
 1. (experimental useSagaReducer)[https://github.com/redux-saga/redux-saga/issues/1692#issuecomment-442765867]
 
 ## Iteration 1
@@ -96,9 +96,10 @@ It is clear that actions sourced from useReducer's dispatch is directed to both 
     }
   }
 ```
-from the above snippet, it is inferred that actions sources from yield put() is also dispatched two-way: one to reducer and one to channel.Because argument dispatch is the redux dispatch, and by the time the store is created using createStore(reducer, applyMiddlwares(sagaMiddleware)), the dispatch function is already patched, thus, the dispatch property in bounded object passed to runSaga, is the already patched dispatch. meaning action from yield put(), while resolved, would go through all the middlewares and sagaMiddleware takes care of putting the action to channel.  
+from the above snippet, it is inferred that actions sources from yield put() is also dispatched two-way: one to reducer and one to channel.Because argument dispatch is the redux dispatch, and by the time the store is created using createStore(reducer, applyMiddlwares(sagaMiddleware)), actions for sure will go through all middlewares before hitting reducer. And sagaMiddleware takes care of putting the action to channel. this discrepancy with how same logic is implemented in this logic come from the fact that useReducer does not have a middleware register/handler, which is also why the monkey patch strategy is used explicitly.
+
 **implementation:**  
-* snippet 1 - fix above mentioned flaw for sagaReducer that is not connected to any sharedChannel
+snippet 1 - fix above mentioned flaw for sagaReducer that is not connected to any sharedChannel
 ```javascript
 // src/useSagaReducer.js
 ...
@@ -107,8 +108,8 @@ return sharedChannel
   : ( storeRef[1](actionObj), //actual call to useReducers' vanilla dispatch
       channel.put(actionObj)) 
 ...
-```
-* snippet 2 - fix above mentioned flaw sharedChannel.broadCast
+```  
+snippet 2 - fix above mentioned flaw sharedChannel.broadCast  
 ```javascript
 // src/useSagaReducer.js
 ...
