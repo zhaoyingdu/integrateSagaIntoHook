@@ -1,5 +1,9 @@
 # Integrate Redux-saga into React hooks - Iteration logs
 
+##credits##:  
+*list of others' work that worth listed explicited. This codebase learned their practice*  
+1. (experimental useSagaReducer)[https://github.com/redux-saga/redux-saga/issues/1692#issuecomment-442765867]
+
 ## Iteration 1
 **objective:** connect useReducer with redux-saga.  
 **overview:**  
@@ -57,9 +61,69 @@ Enhancing Iteration 2.
 components have ioslated react dispatch, but share the result of saga effect(to be explicit, the 'put' effect).  
 I.e. one component's saga can use put effect to dispatch actions to all connected component's reducer.  
 **key words:** isolated hook dispatch, shared saga effect  
-**API:**  
+**steps:**  
 Steps to create shared saga with multiple useReducer:  
 1. create a sharedChannel object  
-2. stepTwo: pass that object a prop to component who will use useReducer and would like to connect to this common channel with some
-3. other component.  
-4. stepThree: use customized hook, useSagaReducer  
+2. pass that object as prop to component who will use useReducer and would like to connect to this common channel with some other component.  
+3. use customized hook-useSagaReducer  
+
+## Iteration 4
+**objective:** itr3 flaw fixes  
+**overview:** fix flaws in itr3 implementation and resolves "todo" stated in iteration 1 note/todo  
+**notes:**  
+besides some potential bug, there is a major flaw in itr3:
+  action sourced from yield put() is only directed to reducer but not to saga channel. this is not coherent to 
+  what redux-saga's sagamiddleware do.
+It is clear that actions sourced from useReducer's dispatch is directed to both reducer and saga channel, see following snippet from redux-saga coebase:
+```javascript
+ function sagaMiddleware({ getState, dispatch }) {
+    boundRunSaga = runSaga.bind(null, {
+      ...options,
+      context,
+      channel,
+      dispatch,
+      getState,
+      sagaMonitor,
+    })
+
+    return next => action => {
+      if (sagaMonitor && sagaMonitor.actionDispatched) {
+        sagaMonitor.actionDispatched(action)
+      }
+      const result = next(action) // hit reducers
+      channel.put(action)
+      return result
+    }
+  }
+```
+from the above snippet, it is inferred that actions sources from yield put() is also dispatched two-way: one to reducer and one to channel.Because argument dispatch is the redux dispatch, and by the time the store is created using createStore(reducer, applyMiddlwares(sagaMiddleware)), the dispatch function is already patched, thus, the dispatch property in bounded object passed to runSaga, is the already patched dispatch. meaning action from yield put(), while resolved, would go through all the middlewares and sagaMiddleware takes care of putting the action to channel.  
+**implementation:**  
+* snippet 1 - fix above mentioned flaw for sagaReducer that is not connected to any sharedChannel
+```javascript
+// src/useSagaReducer.js
+...
+return sharedChannel
+  ? sharedChannel.broadcast(actionObj)
+  : ( storeRef[1](actionObj), //actual call to useReducers' vanilla dispatch
+      channel.put(actionObj)) 
+...
+```
+* snippet 2 - fix above mentioned flaw sharedChannel.broadCast
+```javascript
+// src/useSagaReducer.js
+...
+/* add additional field IO in the reference object*/
+const addIO = ({store,IO, id})=>{ 
+  stores.push({store,IO, id})
+}
+...
+
+/* put action to all IO.channel in the reference list*/
+const broadcast = (actionObj)=>{
+    stores.forEach(({store,IO})=>{
+      store[1](actionObj)
+      IO.channel.put(actionObj)
+    })
+  }
+```
+

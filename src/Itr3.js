@@ -10,7 +10,6 @@ const sharedSaga = sharedChannel()
 const reducer = (state, action) => {
   switch (action.type) {
     case 'INCREMENT':
-      console.log('increment')
       return {...state, counter:state.counter+1}
     case 'DECREMENT':
       return {...state, counter:state.counter-1}
