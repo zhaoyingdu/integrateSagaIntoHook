@@ -3,10 +3,7 @@ import {useSagaReducer, sharedChannel} from './useSagaReducer'
 import { put, takeEvery} from 'redux-saga/effects'
 import './App.css';
 
-
 const sharedSaga = sharedChannel()
-
-
 const reducer = (state, action) => {
   switch (action.type) {
     case 'INCREMENT':
@@ -24,10 +21,11 @@ let decrement = (dispatch)=>dispatch({type:'DECREMENT'})
 const Counter = ({sharedChannel}) =>{
   const saga = function*(){
     yield takeEvery('INCREMENT', function*(){
-      console.log('emem')
+      console.log(`[counter] take increment`)
       yield put({type:'INCREMENTED'})
     })
     yield takeEvery('DECREMENT', function*(){
+      console.log(`[counter] take decrement`)
       yield put({type:'DECREMENTED'})
     })
   }
@@ -61,11 +59,11 @@ const sumReducer = (state, action) => {
 const CounterSum = ({sharedChannel}) =>{
   const saga = function*(){
     yield takeEvery('INCREMENTED', function*(){
-      console.log(`[counter sum]take increment`)
+      console.log(`[counter sum] take incremented`)
     })
 
     yield takeEvery('DECREMENTED', function*(){
-      console.log(`[counter sum]take decrement`)
+      console.log(`[counter sum] take decremented`)
     })
   }
   const [state, dispatch] = useSagaReducer(sumReducer, initState, saga, sharedChannel )
@@ -75,7 +73,6 @@ const CounterSum = ({sharedChannel}) =>{
       <div style={{fontSize: '2rem'}}>decremented: {state.totalDecrement} times</div>
     </div>)
 }
-
 
 const Root = ()=>{
   return (
