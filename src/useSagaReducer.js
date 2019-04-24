@@ -1,6 +1,6 @@
 
 import {stdChannel, runSaga} from 'redux-saga'
-import {useReducer, useEffect, useState} from 'react'
+import {useReducer, useEffect, useState, useRef} from 'react'
 import _ from 'lodash'
 import {call } from 'redux-saga/effects'
 
@@ -24,7 +24,7 @@ const createIO = ({state, dispatch, sharedChannel, id})=>{
     channel,
     dispatch,
     getState(){
-      return stateRef 
+      return state.current
     },
     effectMiddlewares: [
       runEffect => effect =>{
@@ -68,13 +68,14 @@ export const sharedChannel = ()=>{
 
 export const useSagaReducer = (reducer, initState,saga, sharedChannel=null)=>{
   const [state, dispatch] = useReducer(reducer, initState)
-  const [IO, setIO] = useState( createIO({state, dispatch, sharedChannel, id:_.uniqueId()}) )
-  
+  const stateRef = useRef(state)
+  const [action, setAction] = useState({type:null})
   const patchedDispatch = action=>{
     const result = dispatch(action) 
-    IO.channel.put(action)
+    setAction(action)
     return result
   }
+  const [IO, setIO] = useState( createIO({state: stateRef, dispatch:patchedDispatch, sharedChannel, id:_.uniqueId()}) )
 
   useEffect(()=>{
     sharedChannel.addIO(IO)
@@ -86,9 +87,16 @@ export const useSagaReducer = (reducer, initState,saga, sharedChannel=null)=>{
   },[])
   
   useEffect(()=>{
-    if(IO){
-      IO.update(state)  // refresh store[0] in IO
-    }
+    stateRef.current = state //update stateRef's mutable field to latest state
   })
+  useEffect(()=>{
+    if(IO){
+      IO.channel.put(action)  
+      // need to put it here, not in patcheddispatch, otherwise the call after yield tale would 
+      // not get the newest state, instead would be the last one, because a new render 
+      // has not happen. also has the potential to block the callstack if 
+      // saga invokes a long sync call
+    }
+  }, [action])
   return [state, patchedDispatch]
 }

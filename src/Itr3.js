@@ -1,6 +1,6 @@
 import React,{useRef, useImperativeHandle,forwardRef, useState} from 'react';
 import {useSagaReducer, sharedChannel, selectAll} from './useSagaReducer'
-import { put, takeEvery, call} from 'redux-saga/effects'
+import { put, takeEvery, call, select} from 'redux-saga/effects'
 import _ from 'lodash'
 
 import './App.css';
@@ -24,17 +24,15 @@ const Counter = ({sharedChannel}) =>{
   const allStatesref = useRef(null)
   const setStates = states=>allStatesref.current.setStates(states)
   const saga = function*(){
+    yield takeEvery('INCREMENTED_DONE', ({states})=>setStates(states))
+    yield takeEvery('DECREMENTED_DONE', ({states})=>setStates(states))
     yield takeEvery('INCREMENT', function*(){
       console.log(`[counter] take increment`)
       yield put({type:'INCREMENTED'})
-      const states = yield call(selectAll, state=>state)
-      setStates(states)
     })
     yield takeEvery('DECREMENT', function*(){
       console.log(`[counter] take decrement`)
       yield put({type:'DECREMENTED'})
-      const states = yield call(selectAll, state=>state)
-      setStates(states)
     })
   }
   const [state, dispatch] = useSagaReducer(reducer, {counter:0}, saga, sharedChannel )
@@ -70,10 +68,14 @@ const CounterSum = ({sharedChannel}) =>{
   const saga = function*(){
     yield takeEvery('INCREMENTED', function*(){
       console.log(`[counter sum] take incremented`)
+      const states = yield call(selectAll, state=>state)
+      yield put({type: 'INCREMENTED_DONE', states})
     })
 
     yield takeEvery('DECREMENTED', function*(){
       console.log(`[counter sum] take decremented`)
+      const states = yield call(selectAll, state=>state)
+      yield put({type: 'DECREMENTED_DONE', states})
     })
   }
   const [state, dispatch] = useSagaReducer(sumReducer, initState, saga, sharedChannel )
