@@ -1,7 +1,7 @@
 # Integrate Redux-saga into React hooks - Iteration logs
 
-##credits:  
-*list of others' work that worth listed explicitly:*  
+## Credits:  
+*list of others' work that should be listed explicitly:*  
 * This project is mainly based on this implementation:  
   [experimental useSagaReducer](https://github.com/redux-saga/redux-saga/issues/1692#issuecomment-442765867)
 
