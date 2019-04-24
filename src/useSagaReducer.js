@@ -1,10 +1,14 @@
 
-import {stdChannel} from 'redux-saga'
+import {stdChannel, runSaga} from 'redux-saga'
 import {useReducer, useEffect, useState} from 'react'
 import _ from 'lodash'
-import {runSaga } from 'redux-saga'
+import {call } from 'redux-saga/effects'
 
+export function selectAll(selector, args, state){ //selector(getAllState, ...args)
+  return selector(state, ...args)
+}
 const createIO = ({state, dispatch, sharedChannel, id})=>{
+  
   const channel = stdChannel() 
   let stateRef = state
   /** 
@@ -27,6 +31,11 @@ const createIO = ({state, dispatch, sharedChannel, id})=>{
         if(effect.type ==='PUT'){
           sharedChannel? sharedChannel.broadcast({action:effect.payload.action, sourceID: id}) : _.noop()
           return runEffect(effect)
+        }else if(effect.type==='CALL' && effect.payload.fn.name === 'selectAll'){
+          const allState = sharedChannel.getAllState()
+          const selector = effect.payload.args[0]
+          const args = _.drop(effect.payload.args)
+          runEffect(call(selectAll, selector, args, allState))
         }
         return runEffect(effect)   
       }
@@ -39,12 +48,19 @@ export const sharedChannel = ()=>{
   const IOs = []
   const addIO = IO=>IOs.push(IO)
   const broadcast = ({action, sourceID})=>{
-    console.log(IOs)
     _.forEach(IOs, IO=> sourceID === IO.id ?_.noop() :IO.dispatch(action) )
+  }
+  const getAllState = ()=>{
+    let merged = {}
+    _.forEach(IOs, IO=>{
+      _.assign(merged, IO.getState())
+    })
+    return merged
   }
   const remove = id=>_.remove(IOs, IO=>IO.id === id)
   return {
     addIO,
+    getAllState,
     broadcast,
     remove,
   }

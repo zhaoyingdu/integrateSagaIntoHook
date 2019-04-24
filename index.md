@@ -1,14 +1,15 @@
 # Integrate Redux-saga into React hooks - Iteration logs
 
-##credits##:  
-*list of others' work that worth listed explicited. This codebase learned their practices*  
-1. (experimental useSagaReducer)[https://github.com/redux-saga/redux-saga/issues/1692#issuecomment-442765867]
+##credits:  
+*list of others' work that worth listed explicitly:*  
+* This project is mainly based on this implementation:  
+  [experimental useSagaReducer](https://github.com/redux-saga/redux-saga/issues/1692#issuecomment-442765867)
 
 ## Iteration 1
 **objective:** connect useReducer with redux-saga.  
 **overview:**  
 Idea comes from redux's official site [middleware#monkeypatch-middleware](https://redux.js.org/advanced/middleware#attempt-3-monkeypatching-dispatch), redux use middleware to utilize the phase between action is fired(* like when user invoked a dispatch function) and is dispatched(* the action is captured by the reducer). middlewares are "functions" that can intercept this phase, access the action object and do something about it, like logging out the action to console.  
-**key words:** monkeyPatch, redux middlewares' concept  
+**key words:** monkeyPatch, redux middleware  
 **links:** [reduxMiddleware#monkeypatch](https://redux.js.org/advanced/middleware#attempt-3-monkeypatching-dispatch)  
 **implementation:**  
 ![component and action flow](./assets/monkeyPatchStore.png)  
@@ -18,7 +19,8 @@ Idea comes from redux's official site [middleware#monkeypatch-middleware](https:
 **objective:** connect multiple useReducer Together by using redux-saga  
 **Overview:**  
 Enhancing Iteration 1 by allowing multiple useReducer's to use one SagaMiddleWare. Idea comes from redux's store structure. Redux-store 
-allows you to use one store in multiple UI component. On the other hand, useReducer usually deals with state of one component tree(the 'root' node and its children). Hopefully, by 'namespacing' each useReducer, we can connect two sibling(or far away) components together, let them share come related state transactions.  
+allows you to use one store-multiple reducers in multiple UI component. On the other hand, useReducer usually deals with state of one component tree(the 'root' node and its children). Hopefully, by 'namespacing' each useReducer, it is possible to connect two sibling(or far away) useReducers together, let them share saga.  
+this implementation only connects sagas, not reducers, meaning the shared part is only on side-effect level, i.e. one reducer dispatch something that should result in side effect of dispatching something else to another reducer, Implement fully connected useReducers(single dispatch is directed to all reducers) is possible, but skeptical to me. also, having fully connected useReducer meaning there is no need to use multiple saga. hmm.. 
 **key words:** connecting multiple reducers  
 **implementation:**  
 To connect useReducers, a key is assigned to each reducer when patched. Apparently on each render, useReducer is Called once, meaning patchStore is also called each time. So it seems proper to put the patch store call after useReducer call, because we need to patch it every time, otherwise the dispatch would just be the plain dispatch freshly returned from useRecuder(.. , ..).  
@@ -71,10 +73,10 @@ Steps to create shared saga with multiple useReducer:
 **objective:** itr3 flaw fixes  
 **overview:** fix flaws in itr3 implementation and resolves "todo" stated in iteration 1 note/todo  
 **notes:**  
-besides some potential bug, there is a major flaw in itr3:
+besides some minor bugs, there is a major flaw in itr3:
   action sourced from yield put() is only directed to reducer but not to saga channel. this is not coherent to 
   what redux-saga's sagamiddleware do.
-It is clear that actions sourced from useReducer's dispatch is directed to both reducer and saga channel, see following snippet from redux-saga coebase:
+It is clear that actions sourced from redux's dispatch is directed to both reducer and saga channel, see following snippet from redux-saga codebase:
 ```javascript
  function sagaMiddleware({ getState, dispatch }) {
     boundRunSaga = runSaga.bind(null, {
@@ -85,7 +87,6 @@ It is clear that actions sourced from useReducer's dispatch is directed to both 
       getState,
       sagaMonitor,
     })
-
     return next => action => {
       if (sagaMonitor && sagaMonitor.actionDispatched) {
         sagaMonitor.actionDispatched(action)
@@ -96,35 +97,4 @@ It is clear that actions sourced from useReducer's dispatch is directed to both 
     }
   }
 ```
-from the above snippet, it is inferred that actions sources from yield put() is also dispatched two-way: one to reducer and one to channel.Because argument dispatch is the redux dispatch, and by the time the store is created using createStore(reducer, applyMiddlwares(sagaMiddleware)), actions for sure will go through all middlewares before hitting reducer. And sagaMiddleware takes care of putting the action to channel. this discrepancy with how same logic is implemented in this logic come from the fact that useReducer does not have a middleware register/handler, which is also why the monkey patch strategy is used explicitly.
-
-**implementation:**  
-snippet 1 - fix above mentioned flaw for sagaReducer that is not connected to any sharedChannel
-```javascript
-// src/useSagaReducer.js
-...
-return sharedChannel
-  ? sharedChannel.broadcast(actionObj)
-  : ( storeRef[1](actionObj), //actual call to useReducers' vanilla dispatch
-      channel.put(actionObj)) 
-...
-```  
-snippet 2 - fix above mentioned flaw sharedChannel.broadCast  
-```javascript
-// src/useSagaReducer.js
-...
-/* add additional field IO in the reference object*/
-const addIO = ({store,IO, id})=>{ 
-  stores.push({store,IO, id})
-}
-...
-
-/* put action to all IO.channel in the reference list*/
-const broadcast = (actionObj)=>{
-    stores.forEach(({store,IO})=>{
-      store[1](actionObj)
-      IO.channel.put(actionObj)
-    })
-  }
-```
-
+from the above snippet, it is inferred that action sourced from yield put() is also dispatched two-way: one to reducer and one to channel.Because argument dispatch is the redux dispatch, and by the time the store is created using createStore(reducer, applyMiddlwares(sagaMiddleware)), actions for sure will go through all middlewares before hitting reducer. And sagaMiddleware takes care of putting the action to channel. 
