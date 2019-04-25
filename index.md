@@ -1,5 +1,9 @@
 # Integrate Redux-saga into React hooks - Iteration logs
 
+## at Front  
+this is a self study project.
+More reliable approch to use redux in hook style is already available in [react-redux v7.1.0-alpha.1](https://github.com/reduxjs/react-redux/releases/tag/v7.1.0-alpha.1)
+
 ## Credits:  
 *list of others' work that should be listed explicitly:*  
 * This project is mainly based on this implementation:  
