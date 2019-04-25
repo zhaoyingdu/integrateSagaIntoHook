@@ -102,3 +102,28 @@ It is clear that actions sourced from redux's dispatch is directed to both reduc
   }
 ```
 from the above snippet, it is inferred that action sourced from yield put() is also dispatched two-way: one to reducer and one to channel.Because argument dispatch is the redux dispatch, and by the time the store is created using createStore(reducer, applyMiddlwares(sagaMiddleware)), actions for sure will go through all middlewares before hitting reducer. And sagaMiddleware takes care of putting the action to channel. 
+
+
+## Iteration 5  
+**objective:** create detached store(conbination of saga and reducer).  
+**links:**  
+inspired by: [... if we want long-running sagas then we need global state...](https://github.com/redux-saga/redux-saga/issues/1692#issuecomment-462154946)  
+issue#3: [detached useSagaReducer](https://github.com/zhaoyingdu/useSagaWithReducer/issues/3#issue-437011863)  
+**implementation**:  
+put useSagaReducer inside React Context so it can be global. like react-redux, the store object(detail is given later) is passed as a prop to the context Provider. the store object is obtained by a call to `createStore`:
+```javascript
+const createStore = (reducer, init, saga) => [reducer, init, saga];
+const SagaReducerContextProvider = ({ children, store }) => {
+  const [state, dispatch] = useSagaReducer(...store);
+  return (
+    <SagaReducerContext.Provider value={[state, dispatch]}>
+      {children}
+    </SagaReducerContext.Provider>
+  );
+};
+```
+`reducer`, `init`, `saga` can be provided explicitly, this is a mimic to redux and react-redux. purpose is to discover its potential in future.  
+*todo:* see if it is possible to drop a Provider component. by passing value directly upon calling React.createContext(...someValue) 
+
+
+
