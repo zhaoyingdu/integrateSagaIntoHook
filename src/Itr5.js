@@ -4,12 +4,15 @@ import {
   SagaReducerContext,
   SagaReducerContextProvider
 } from "./useSagaReducerDetached";
-import { put, takeEvery, select } from "redux-saga/effects";
+import { put, takeEvery, select,take } from "redux-saga/effects";
 import _ from "lodash";
 
 import "./App.css";
 
 const saga = function*() {
+  yield put({type:'lol'})
+    yield take('lol')
+    console.log('hmmm')
   yield takeEvery("INCREMENTED", function*() {
     console.log(`[counter sum] take incremented`);
     const states = yield select(state => state);
@@ -52,8 +55,8 @@ const reducer = (state, action) => {
       return state;
   }
 };
-
 const store = createStore(reducer, initState, saga);
+
 
 let increment = dispatch => dispatch({ type: "INCREMENT" });
 let decrement = dispatch => dispatch({ type: "DECREMENT" });
@@ -90,13 +93,14 @@ const CounterSum = () => {
   );
 };
 
+
 const Root = () => {
   return (
     <SagaReducerContextProvider store={store}>
       <Counter />
       <CounterSum />
     </SagaReducerContextProvider>
-  );
-};
+  )
+}
 
 export default Root;

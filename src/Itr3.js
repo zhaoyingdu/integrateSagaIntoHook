@@ -10,7 +10,7 @@ import {
   selectAll,
   putToAll
 } from "./useSagaReducer";
-import { put, takeEvery, call, delay } from "redux-saga/effects";
+import { put, takeEvery, call, take } from "redux-saga/effects";
 import _ from "lodash";
 
 import "./App.css";
@@ -85,6 +85,7 @@ const sumReducer = (state, action) => {
 };
 const CounterSum = ({ sharedChannel }) => {
   const saga = function*() {
+    
     yield takeEvery("INCREMENTED", function*() {
       console.log(`[counter sum] take incremented`);
       const states = yield call(selectAll, state => state);

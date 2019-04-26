@@ -10,17 +10,8 @@ export function selectAll(selector, args, state) {
 export function putToAll() {}
 const createIO = ({ state, dispatch, sharedChannel, id }) => {
   const channel = stdChannel();
-  let stateRef = state;
-  /**
-   * reference to the newest store[0]
-   * according to this post {@link https://overreacted.io/a-complete-guide-to-useeffect/} about react mental model,
-   */
-  const update = state => {
-    stateRef = state;
-  };
   return {
     id,
-    update,
     channel,
     dispatch,
     getState() {
@@ -48,7 +39,10 @@ const createIO = ({ state, dispatch, sharedChannel, id }) => {
 
 export const sharedChannel = () => {
   const IOs = [];
-  const addIO = IO => IOs.push(IO);
+  const addIO = IO => {
+    IOs.push(IO)
+    return ()=>_.remove(IOs, {id: IO.id})
+  }
   const broadcast = action => {
     _.forEach(IOs, IO => IO.dispatch(action));
   };
@@ -59,12 +53,10 @@ export const sharedChannel = () => {
     });
     return merged;
   };
-  const remove = id => _.remove(IOs, IO => IO.id === id);
   return {
     addIO,
     getAllState,
     broadcast,
-    remove
   };
 };
 
@@ -92,10 +84,10 @@ export const useSagaReducer = (
   );
 
   useEffect(() => {
-    sharedChannel ? sharedChannel.addIO(IO) : _.noop();
+    const removeIO = sharedChannel ? sharedChannel.addIO(IO) : ()=>_.noop();
     const mainTask = runSaga(IO, saga);
     return () => {
-      sharedChannel ? sharedChannel.remove(IO.id) : _.noop();
+      removeIO();
       mainTask.cancel();
     };
   }, []);
