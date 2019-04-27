@@ -82,7 +82,8 @@ const useStore = ({appendQueue, dispatch: broadCast, reducer, init, flushState, 
   const [state, dispatch] = useReducer(reducer, init)
   appendQueue({dispatch, id})
   flushState(state)
- return [state, broadCast, addSubScriber] 
+  const filteredState = stateFilter ? _.pick(state, stateFilter):state
+  return [filteredState, broadCast, addSubScriber] 
 }
 
 export default useStore
