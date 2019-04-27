@@ -147,6 +147,6 @@ dispatch: a monkeypatched dispatch, can supply asynchronous/function action[note
 addSubscriber: <Function> add listener on action, triggered on action being dispatched.[note-2], only applicable to STRING||SYMBOL actions, not applicable on function/promise actions.  
 
 **note:**  
-1. asynchronous action: {type: Function||Promise, arguments: arguments supplied to the action function}
+1. asynchronous action: {type: Function|Promise, arguments: arguments supplied to the action function}
 2. addSubscriber scheme: const unsubscribe = addSubscriber({*ACTIONNAME*: *listener function*}), to unsubcribe, simply invoke unsubscribe()
 
