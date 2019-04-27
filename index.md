@@ -126,25 +126,26 @@ const SagaReducerContextProvider = ({ children, store }) => {
 *todo:* see if it is possible to drop a Provider component. by passing value directly upon calling React.createContext(...someValue) 
 
 ## Iteration 5 
-**objective:** useStore API: useStore, createStore
+**objective:** fix/update useStore  
 **API**:  
+
 createStore(reduxer, initState, ...proxies)  
 *params:*  
-reducer: reducers  
-initState: <Object>  
+reducer: same in useReducer
+initState: same in useReducer  
 proxies: middlewares  
 *return:*  
 store object that is supposed to be supplied to useStore.  
+
 useStore(store, stateFilter)  
 *params:*  
 store: object returned from createStore.  
 stateFilter: an array of object that is applicable to the state tree of the supplied state to the reducer.  
-*return:*  <Array>
-[
-  state: state || filtered state  
-  dispatch: a monkeypatched dispatch, can supply asynchronous/function action[note-1]  
-  addSubscriber: <Function> add listener on action, triggered on action being dispatched.[note-2], only applicable to STRING||SYMBOL actions, not applicable on function/promise actions.
-]  
+*return:*  <Array>  
+state: state || filtered state  
+dispatch: a monkeypatched dispatch, can supply asynchronous/function action[note-1]  
+addSubscriber: <Function> add listener on action, triggered on action being dispatched.[note-2], only applicable to STRING||SYMBOL actions, not applicable on function/promise actions.  
+
 **note:**  
 1. asynchronous action: {type: Function||Promise, arguments: arguments supplied to the action function}
 2. addSubscriber scheme: const unsubscribe = addSubscriber({*ACTIONNAME*: *listener function*}), to unsubcribe, simply invoke unsubscribe()
