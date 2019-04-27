@@ -1,25 +1,21 @@
-import React,{useReducer, useContext} from "react";
+import {useReducer,useState} from "react";
 import _ from 'lodash'
 
 
-export const createStore = (reducer, init)=>{
+export const createStore = (reducer, init, ...applyProxy)=>{
+  let id
+  let state
   let subscribers = {}
-  const dispatchHandler = {
-    apply: (target, thisArg, action)=>{
-      const {type} = action[0]
-      if(type instanceof Function || type instanceof Promise){
-        const {argument} = action[0]
-        return type(argument)
-      }
-      subscribers[type] && subscribers[type].length !== 0 
-      ? setImmediate(()=>{
-          _.forEach(subscribers[type], ({listener})=>listener(action[0]))
-        }) 
-      : _.noop()
-      return _.bind(target, thisArg, action[0])()
-    }
+  const dispatchers = []
+  const ids = []
+  const appendQueue = ({dispatch, id})=>{
+    if(ids.includes(id)) return
+    ids.push(id)
+    dispatchers.push(dispatch)
+    return true
   }
-  const addSubScribers = (newSubscriber)=>{
+
+  const addSubScriber = (newSubscriber)=>{
     const key = _.keys(newSubscriber)[0]
     const listener = newSubscriber[_.keys(newSubscriber)[0]]
     const id = _.uniqueId()
@@ -31,27 +27,62 @@ export const createStore = (reducer, init)=>{
     }
   } 
 
-  const _stateBuffer = {}
+  let broadCast = action =>{
+    const {type} = action
+    if(type instanceof Function || type instanceof Promise){
+      const {argument} = action
+      return type(argument)
+    }
+    subscribers[type] && subscribers[type].length !== 0 
+      ? setImmediate(()=>{
+          _.forEach(subscribers[type], ({listener})=>listener(action[0]))
+        }) 
+      : _.noop()
+    _.forEach(dispatchers, dispatch=>dispatch(action))
+  }
+  const flushState = s=>state=s
+  const getState = () => state
+
+  // code stole from redux >_<
+  function compose(...funcs) {
+    if (funcs.length === 0) {
+      return arg => arg
+    }
+    if (funcs.length === 1) {
+      return funcs[0]
+    }
+    return funcs.reduce((a, b) => (...args) => a(b(...args)))
+  }
+  if(applyProxy.length === 0){
+
+  }else{
+    const middlewareAPI = {
+      getState: getState,
+      dispatch: (...args) => broadCast(...args)
+    }
+    const chain = applyProxy.map(middleware => middleware(middlewareAPI))
+    broadCast = compose(...chain)(broadCast)
+  }
+  // ... END ... 
 
   return {
-    dispatchHandler,
-    addSubScribers,
+    appendQueue,
+    flushState,
+    dispatch: broadCast,
     reducer, 
+    addSubScriber,
     init,
-    _stateBuffer
+    state
   } 
 }
 
 
-const useStore = ({dispatchHandler,addSubScribers, reducer, init, _stateBuffer}, stateFilter, id)=>{
+const useStore = ({appendQueue, dispatch: broadCast, reducer, init, flushState, addSubScriber}, stateFilter)=>{
+  const [id, setID] = useState(_.uniqueId())
   const [state, dispatch] = useReducer(reducer, init)
-  const subscribedDispatch = new Proxy(dispatch, dispatchHandler)
-  console.log(id +' '+ JSON.stringify(_stateBuffer))
-  _.merge(_stateBuffer, state)
-  console.log(id+' '+ JSON.stringify(_stateBuffer))
-  let filteredState = stateFilter? _.pick(_stateBuffer, stateFilter) : _stateBuffer
-  
-  return [filteredState, subscribedDispatch, addSubScribers]
+  appendQueue({dispatch, id})
+  flushState(state)
+ return [state, broadCast, addSubScriber] 
 }
 
 export default useStore
