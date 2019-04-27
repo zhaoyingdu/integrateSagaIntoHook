@@ -1,18 +1,15 @@
-import {useReducer,useState} from "react";
+import {useReducer,useState, useEffect} from "react";
 import _ from 'lodash'
 
 
 export const createStore = (reducer, init, ...applyProxy)=>{
-  let id
   let state
   let subscribers = {}
   const dispatchers = []
-  const ids = []
-  const appendQueue = ({dispatch, id})=>{
-    if(ids.includes(id)) return
-    ids.push(id)
-    dispatchers.push(dispatch)
-    return true
+  const appendQueue = dispatch=>{
+    const id = _.uniqueId()
+    dispatchers.push({dispatch, id})
+    return ()=>_.remove(dispatch, {id})
   }
 
   const addSubScriber = (newSubscriber)=>{
@@ -38,9 +35,9 @@ export const createStore = (reducer, init, ...applyProxy)=>{
           _.forEach(subscribers[type], ({listener})=>listener(action[0]))
         }) 
       : _.noop()
-    _.forEach(dispatchers, dispatch=>dispatch(action))
+    _.forEach(dispatchers, ({dispatch})=>dispatch(action))
   }
-  const flushState = s=>state=s
+  const flushState = s=>{state=s}
   const getState = () => state
 
   // code stole from redux >_<
@@ -78,10 +75,13 @@ export const createStore = (reducer, init, ...applyProxy)=>{
 
 
 const useStore = ({appendQueue, dispatch: broadCast, reducer, init, flushState, addSubScriber}, stateFilter)=>{
-  const [id, setID] = useState(_.uniqueId())
   const [state, dispatch] = useReducer(reducer, init)
-  appendQueue({dispatch, id})
-  flushState(state)
+  useEffect(()=>{
+    const remove = appendQueue(dispatch)
+    console.log('mime')
+    return ()=>remove()
+  },[])
+  useEffect(()=>{flushState(state)})
   const filteredState = stateFilter ? _.pick(state, stateFilter):state
   return [filteredState, broadCast, addSubScriber] 
 }
