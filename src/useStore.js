@@ -1,89 +1,92 @@
-import {useReducer,useState, useEffect} from "react";
+import React, {useReducer, useEffect,useState,useRef, useContext} from "react";
 import _ from 'lodash'
+import {createStore as ReduxStore} from 'redux'
+import { EventEmitter } from "events";
 
 
-export const createStore = (reducer, init, ...applyProxy)=>{
-  let state
-  let subscribers = {}
-  const dispatchers = []
-  const appendQueue = dispatch=>{
-    const id = _.uniqueId()
-    dispatchers.push({dispatch, id})
-    return ()=>_.remove(dispatch, {id})
-  }
 
+export const createStore = (...args)=>{
+  const listeners = []
+  const dispatchEventEmitter  = new EventEmitter()
   const addSubScriber = (newSubscriber)=>{
     const key = _.keys(newSubscriber)[0]
     const listener = newSubscriber[_.keys(newSubscriber)[0]]
     const id = _.uniqueId()
-    subscribers[key] 
-      ? subscribers[key].push({listener, id})
-      : subscribers[key] = [{listener, id}]
+    listeners[key] 
+      ? listeners[key].push({listener, id})
+      : listeners[key] = [{listener, id}]
     return ()=>{
-      _.remove(subscribers[key], {id})
+      _.remove(listeners[key], {id})
     }
   } 
+  const {getState, dispatch} = ReduxStore(...args)
 
-  let broadCast = action =>{
-    const {type} = action
-    if(type instanceof Function || type instanceof Promise){
-      const {argument} = action
-      return type(argument)
+  const dispatchHandler = {
+    apply: (target, thisArg, args)=>{
+      const {type, argument} = args[0]
+      if(type instanceof Function || type instanceof Promise){
+        type(argument)
+        return args[0]
+      }
+      target(...args)
+      //dispatchEventEmitter.emit('DISPATCH', getState())
+      if(!_.isEmpty(listeners && !(type instanceof Function || type instanceof Promise))){
+        _.forEach(listeners, ({listener})=>{
+          listener()
+        })
+      }
+      
+      return args[0]
     }
-    subscribers[type] && subscribers[type].length !== 0 
-      ? setImmediate(()=>{
-          _.forEach(subscribers[type], ({listener})=>listener(action[0]))
-        }) 
-      : _.noop()
-    _.forEach(dispatchers, ({dispatch})=>dispatch(action))
   }
-  const flushState = s=>{state=s}
-  const getState = () => state
-
-  // code stole from redux >_<
-  function compose(...funcs) {
-    if (funcs.length === 0) {
-      return arg => arg
+  const proxiedDispatch = new Proxy(dispatch, dispatchHandler)
+  const ContextValue = {
+    state:getState(),
+    dispatch: function(action){
+      proxiedDispatch(action)
+      this.state = getState()
     }
-    if (funcs.length === 1) {
-      return funcs[0]
-    }
-    return funcs.reduce((a, b) => (...args) => a(b(...args)))
   }
-  if(applyProxy.length === 0){
 
-  }else{
-    const middlewareAPI = {
-      getState: getState,
-      dispatch: (...args) => broadCast(...args)
-    }
-    const chain = applyProxy.map(middleware => middleware(middlewareAPI))
-    broadCast = compose(...chain)(broadCast)
+  function ContextVal(initState){
+    this.state = {current: initState}
+    this.dispatch = (function(action){
+      proxiedDispatch(action)
+      this.state.current = getState()
+    }).bind(this)
   }
-  // ... END ... 
 
-  return {
-    appendQueue,
-    flushState,
-    dispatch: broadCast,
-    reducer, 
-    addSubScriber,
-    init,
-    state
-  } 
+  const Context = React.createContext(new ContextVal(getState()))
+
+  dispatchEventEmitter.on('DISPATCH', newState=>{
+    console.log('value'+Context.Provider.value)
+    Context.Provider.value=newState
+  })
+
+  return {Context, addSubScriber}
 }
 
 
-const useStore = ({appendQueue, dispatch: broadCast, reducer, init, flushState, addSubScriber}, stateFilter)=>{
-  const [state, dispatch] = useReducer(reducer, init)
+const context = React.createContext({
+  state:{value:{counter:0}}
+})
+
+const useStore = ({Context, addSubScriber})=>{
+  /*let {state, dispatch} = useContext(Context)
+  const [triggerableState, setTriggerableState] = useState(state.current)
+
+  const dispatchTrigger = action=>{
+    //apply:(target, thisArgs, args)=>{
+      dispatch(action)
+      setTriggerableState(state.current)
+      console.log('current '+JSON.stringify(triggerableState))
+  }
   useEffect(()=>{
-    const remove = appendQueue(dispatch)
-    console.log('mime')
-    return ()=>remove()
-  },[])
-  useEffect(()=>{flushState(state)})
-  const filteredState = stateFilter ? _.pick(state, stateFilter):state
-  return [filteredState, broadCast, addSubScriber] 
+  },[])*/
+
+  return useContext(Context)
+
 }
 
-export default useStore
+
+export default useStore//new Proxy(useStore, useStoreHandler)
