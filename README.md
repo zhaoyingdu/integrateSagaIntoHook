@@ -1,8 +1,28 @@
-### example usage  
+## copy to use  
+```javascript
+import {useState, useEffect} from "react";
+import $$observable from 'symbol-observable'
 
+const useStore = (store)=>{
+  const [state, setState] = useState(store.getState())
+  useEffect(()=>{
+    const observer = store[$$observable]()
+    observer.subscribe({
+      next: state=>{
+        setState(state)
+      }
+    })
+  }, [])  
+
+  return [state, store.dispatch, store.subscribe, store.replaceReducer, store[$$observable]]
+}
+export default useStore
+```
+
+## example  
 first do some setup works.  
 ```javascript
-import useStore from 'usestorehook'
+import useStore from './usestorehook'
 import {createStore} from 'redux'
 import React from 'react'
 const reducer = (S, A)=>{
