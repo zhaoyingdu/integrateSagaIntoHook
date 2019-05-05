@@ -12,7 +12,7 @@ const useStore = (store)=>{
     })
   }, [])  
 
-  return [state, store.dispatch]
+  return [state, store.dispatch, store.subscribe, store.replaceReducer, store[$$observable]]
 }
 
 export default useStore
