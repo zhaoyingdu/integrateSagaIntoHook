@@ -1,8 +1,7 @@
 import React,{useState, useEffect} from "react";
 import useStore, {createStore} from "./useStore";
-import { applyMiddleware} from 'redux'
 import createSagaMiddleware from 'redux-saga'
-import { select, put, takeEvery} from "redux-saga/effects";
+import { put, takeEvery} from "redux-saga/effects";
 
 import _ from "lodash";
 
@@ -12,8 +11,6 @@ const sagaMiddleware = createSagaMiddleware()
 const saga = function*() {
   yield takeEvery("INCREMENT", function*() {
     yield put({ type: "INCREMENTED" });
-    const state = yield select(state=>state)
-    console.log(JSON.stringify('yield: '+JSON.stringify(state)))
   });
   yield takeEvery("DECREMENT", function*() {
     yield put({ type: "DECREMENTED" });
@@ -38,18 +35,17 @@ const reducer = (state, action) => {
     case 'RESET':
       return initState
     default:
-      console.log('action'+JSON.stringify(action))
       return state;
   }
 }
 
 // example use of initialize store + with middleware - start
-const store = createStore(reducer, initState, applyMiddleware(sagaMiddleware))
+const store = createStore(reducer, initState, sagaMiddleware)
 sagaMiddleware.run(saga)
 // example use of initialize store + with middleware - end
 
 const Counter = () => {
-  const {state, dispatch} = useStore(store)
+  const [state, dispatch] = useStore(store)
   return (
     <div className="App">
       <div style={{ fontSize: "5rem" }}>{state.counter}</div>
@@ -63,7 +59,7 @@ const Counter = () => {
 };
 
 const CounterSum = () => {
-  const {state, dispatch} = useStore(store)
+  const [state, dispatch, addSubsriber] = useStore(store)
   const [countDown, setCountdown] = useState(5)
 
   //example use of action subscribers-start
@@ -74,7 +70,22 @@ const CounterSum = () => {
     }, 1000)  
   }
   useEffect(()=>{
-    
+    const remove1 = addSubsriber({
+      'about to reset':counting
+    })
+    const remove2 = addSubsriber({
+      'RESET':
+      ()=>{
+        if(timer){
+          clearInterval(timer)
+          setCountdown(5)
+        }
+      }
+    })
+    return ()=>{
+      remove1()
+      remove2()
+    }
   }, [])
   //example use of action subscribers-end
 
