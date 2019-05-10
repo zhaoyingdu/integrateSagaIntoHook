@@ -31,29 +31,22 @@ const reducer = (S, A)=>{
 const store = createStore(reducer, {count: 0})
 ```
 
-now create two components. Both component share the `state`  
+now create two components. Both component share the same`state`  
 and `dispatch`. The `state` object is a "wrapper" around the  
 store's state, which is updated upon every dispatch.  
 ```javascript
 const componentA = ()=>{
   const [state, dispatch] = useStore(store)
   console.log(`
-    conponentA reporting: state updated
+    componentA updated: ${state}
   `)
 }
 const componentB = ()=>{
   const [state, dispatch] = useStore(store)
   console.log(`
-    conponentB reporting: state updated
+    componentB updated: ${state}
   `)
-}
-```
-
-create another component to dispatch action every 1 second.  
-The state update is shared by all three components
-```javascript
-const componentC = ()=>{
-  const [state, dispatch] = useStore(store)  
+  
   useEffect(()=>{
     const timer = setInterval(()=>{
       dispatch({type: "dummy"})
