@@ -1,6 +1,35 @@
-## install  
+# custom useStore hook  
+
+## purpose  
+by using this hook, you can use one Store object in multiple React components, unlike useReducer, which require the reducer share by parent and children. useStore can be used by unrelated components, just like how you use `connect` api in react-redux to share the same store/reducer between multiple components. 
+
+## usage  
+install or copy to use  
+### install 
 ```  
 npm install customhook-usestore --save
+```
+### copy to use  
+make sure `symbol-observable` is installed
+```javascript  
+import {useState, useEffect} from "react";
+import $$observable from 'symbol-observable'
+
+const useStore = (store)=>{
+  const [state, setState] = useState(store.getState())
+  useEffect(()=>{
+    const observer = store[$$observable]()
+    observer.subscribe({
+      next: state=>{
+        setState(state)
+      }
+    })
+    return ()=>observer.unsubscribe()
+  }, [])  
+
+  return [state, store.dispatch, store.subscribe, store.replaceReducer, store[$$observable]]
+}
+export default useStore
 ```
 
 ## link
@@ -28,7 +57,7 @@ const ComponentA = ()=>{
   const [state, dispatch] = useStore(store)
   return ( 
     <p>
-      count displayed by component A: {state}
+      count displayed by component A: {state.count}
     </p>
   )
 }
@@ -40,14 +69,14 @@ const ComponentB = ()=>{
   useEffect(()=>{
     const timer = setInterval(()=>{
       dispatch({type: "dummy"})
-      setUpdateCount(prev=>prev++);
+      setUpdateCount(prev=>prev+1);
     }, 1000)
     return ()=>clearInterval(timer)
   }, [])
 
   return (
     <p>
-      count displayed by component B: {state}
+      count displayed by component B: {state.count}
       <br />
       Component B has updated state in our store {updateCount} times.
     </p>
