@@ -1,5 +1,5 @@
 {
-  "name": "usestorehook",
+  "name": "customhook-usestore",
   "version": "0.1.0",
   "main": "index.js",
   "devDependencies": {},
@@ -9,5 +9,5 @@
     "react": "^16.8.6",
     "symbol-observable": "^1.2.0"
   },
-  "bug":"https://github.com/zhaoyingdu/useStore/issues"
+  "bug": "https://github.com/zhaoyingdu/useStore/issues"
 }

@@ -1,5 +1,5 @@
-import {useState, useEffect} from "react";
-import $$observable from 'symbol-observable'
+const {useState, useEffect} = require("react")
+const $$observable = require('symbol-observable')
 
 const useStore = (store)=>{
   const [state, setState] = useState(store.getState())
@@ -10,9 +10,11 @@ const useStore = (store)=>{
         setState(state)
       }
     })
+
+    return ()=>observer.unsubscribe()
   }, [])  
 
   return [state, store.dispatch, store.subscribe, store.replaceReducer, store[$$observable]]
 }
 
-export default useStore
+module.exports = useStore
